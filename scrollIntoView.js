@@ -10,6 +10,39 @@ function setElementScroll(element, x, y){
         element.scrollTop = y;
     }
 }
+function getElementScroll(element){
+    if(element === window){
+        return {
+            x: element.scrollX,
+            y: element.scrollY
+        };
+    }else{
+        return {
+            x: element.scrollLeft,
+            y: element.scrollTop,
+        };
+    }
+}
+
+function getVisibilityInfo(target, parent){
+    var minLocation = getTargetScrollLocation(target, parent, {left: 1, top: 1});
+    var maxLocation = getTargetScrollLocation(target, parent, {left: 0, top: 0});
+    var parentScroll = getElementScroll(parent);
+    var margin = {
+        top: parentScroll.y - minLocation.y,
+        left: parentScroll.x - minLocation.x,
+        bottom: maxLocation.y - parentScroll.y,
+        right: maxLocation.x - parentScroll.x
+    };
+    var inViewport = ['top', 'left', 'right', 'bottom'].filter(function(side) {
+        return margin[side] < 0;
+    }).length === 0;
+
+    return {
+        margin: margin,
+        inViewport: inViewport
+    };
+}
 
 function getTargetScrollLocation(target, parent, align){
     var targetPosition = target.getBoundingClientRect(),
@@ -139,7 +172,7 @@ module.exports = function(target, settings, callback){
 
     while(parent){
         if(
-            settings.validTarget ? settings.validTarget(parent, parents) : true &&
+            settings.validTarget ? settings.validTarget(parent, parents, getVisibilityInfo(target, parent)) : true &&
             parent === window ||
             (
                 parent.scrollHeight !== parent.clientHeight ||
