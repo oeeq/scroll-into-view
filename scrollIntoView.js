@@ -24,13 +24,23 @@ function getElementScroll(element){
     }
 }
 
-function isScrollNeeded(target, parent){
+function getVisibilityInfo(target, parent){
     var minLocation = getTargetScrollLocation(target, parent, {left: 1, top: 1});
     var maxLocation = getTargetScrollLocation(target, parent, {left: 0, top: 0});
     var parentScroll = getElementScroll(parent);
+    var margin = {
+        top: parentScroll.y - minLocation.y,
+        left: parentScroll.x - minLocation.x,
+        bottom: maxLocation.y - parentScroll.y,
+        right: maxLocation.x - parentScroll.x
+    };
+    var inViewport = ['top', 'left', 'right', 'bottom'].filter(function(side) {
+        return margin[side] < 0;
+    }).length === 0;
+
     return {
-        x: parentScroll.x < minLocation.x || parentScroll.x > maxLocation.x,
-        y: parentScroll.y < minLocation.y || parentScroll.y > maxLocation.y
+        margin: margin,
+        inViewport: inViewport
     };
 }
 
@@ -84,19 +94,6 @@ function animate(parent){
             time = Date.now() - scrollSettings.startTime,
             timeValue = Math.min(1 / scrollSettings.time * time, 1);
 
-        if (!scrollSettings.force) {
-            var scrollNeeded = isScrollNeeded(scrollSettings.target, parent);
-            var parentScroll = getElementScroll(parent);
-            if (!scrollNeeded.x) {
-                location.x = parentScroll.x;
-                location.differenceX = 0;
-            }
-            if (!scrollNeeded.y) {
-                location.y = parentScroll.y;
-                location.differenceY = 0;
-            }
-        }
-
         if(
             time > scrollSettings.time + 20 ||
             (Math.abs(location.differenceY) <= 1 && Math.abs(location.differenceX) <= 1)
@@ -137,7 +134,6 @@ function transitionScrollTo(target, parent, settings, callback){
         time: settings.time,
         ease: settings.ease,
         align: settings.align,
-        force: settings.force,
         end: end
     };
     parent.addEventListener('touchstart', end.bind(null, CANCELED));
@@ -163,7 +159,6 @@ module.exports = function(target, settings, callback){
 
     settings.time = settings.time || 1000;
     settings.ease = settings.ease || function(v){return v;};
-    settings.force = settings.force !== undefined ? settings.force : true;
 
     var parent = target.parentElement,
         parents = 0;
@@ -177,7 +172,7 @@ module.exports = function(target, settings, callback){
 
     while(parent){
         if(
-            settings.validTarget ? settings.validTarget(parent, parents) : true &&
+            settings.validTarget ? settings.validTarget(parent, parents, getVisibilityInfo(target, parent)) : true &&
             parent === window ||
             (
                 parent.scrollHeight !== parent.clientHeight ||
