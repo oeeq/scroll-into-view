@@ -112,7 +112,7 @@ function transitionScrollTo(target, parent, settings, callback){
 
 module.exports = function(target, settings, callback){
     if(!target){
-        return;
+        return 0;
     }
 
     if(typeof settings === 'function'){
@@ -154,11 +154,12 @@ module.exports = function(target, settings, callback){
         parent = parent.parentElement;
 
         if(!parent){
-            return;
+            return parents;
         }
 
         if(parent.tagName === 'BODY'){
             parent = window;
         }
     }
+    return parents;
 };
